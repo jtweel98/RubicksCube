@@ -1,28 +1,15 @@
+//Scene creation
 var scene = new THREE.Scene();
 
 //Creating objects
+var cube = getCube(1,0xff0000);
 var pointLight1 = getPointLight(1, 0xffffff);
 var pointLight2 = getPointLight(1, 0xffffff);
-var cube  = new RubeCube();
-
-var test = new Piece([0,0,0], 1);
-test.cube.position.set(3,3,3);
-var cubeMaterials = [ 
-    new THREE.MeshBasicMaterial({color:"red", side: THREE.DoubleSide}),
-    new THREE.MeshBasicMaterial({color:"blue", side: THREE.DoubleSide}), 
-    new THREE.MeshBasicMaterial({color:"green", side: THREE.DoubleSide}),
-    new THREE.MeshBasicMaterial({color:"yellow", side: THREE.DoubleSide}), 
-    new THREE.MeshBasicMaterial({color:"orange", side: THREE.DoubleSide}), 
-    new THREE.MeshBasicMaterial({color:"white", side: THREE.DoubleSide}), 
-]; 
-
-test.cube.material = cubeMaterials
 
 //Adding objects to scene
+scene.add(cube);
 scene.add(pointLight1);
 scene.add(pointLight2);
-scene.add(cube.GetVisualObject());
-scene.add(test.cube);
 
 //Begining Positions
 pointLight1.position.y = 7;
@@ -48,8 +35,9 @@ document.getElementById('main').appendChild(renderer.domElement)
 var controls = new THREE.OrbitControls(camera, renderer.domElement)
 ContinuousRender(renderer,scene,camera,controls);
 
+//GUI Stuff
+var gui = new dat.GUI();
 
-// --------------- FUNCTIONS -------------------------------------------------------------------
 function getCube (s, color) {
     var geometry = new THREE.BoxGeometry(s,s,s);
     var material = new THREE.MeshPhongMaterial({

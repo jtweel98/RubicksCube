@@ -1,7 +1,7 @@
 class Face {
     constructor(orientation) {
         this.solvedOrientation = orientation;
-        this.currentOrientation = this.solvedOrientation;
+        this.orientation = this.solvedOrientation;
         this.color = Face.CoordinateToColor()[orientation];
     }
 
@@ -13,6 +13,17 @@ class Face {
             'b' : [0,0,-1],
             'r' : [1,0,0],
             'o' : [-1,0,0],
+        }
+    }
+
+    static ColorToHex() {
+        return {
+            'w' : 0xffffff,
+            'y' : 0xffff00,
+            'g' : 0x00ff00,
+            'b' : 0x0000ff,
+            'r' : 0xff0000,
+            'o' : 0xffa500,
         }
     }
 
@@ -33,7 +44,7 @@ class Piece {
         this.cube = this.CreateCube(size,'rgb(211,211,211)');
         this.location = location;
         this.solvedLocation = this.location;
-        this.faces = this.PaintPiece();
+        this.faces = this.FindPieceFaces();
         this.type = Math.abs(this.location[0]) + Math.abs(this.location[1]) + Math.abs(this.location[2]);
     }
 
@@ -45,7 +56,7 @@ class Piece {
         return mesh;
     }
 
-    PaintPiece() {
+    FindPieceFaces() {
         var pieceFaces = [];
         var orientation = [];
         this.location.forEach(function(element, index) {
@@ -56,6 +67,37 @@ class Piece {
             }
         })
         return pieceFaces;
+    }
+
+    PaintPiece(){
+        var currentColor = this.cube.material.color;
+        var facePossibilities = [0,0,0]
+        var faceMaterials = [];
+
+        var counter = 0;
+        for (var i=2;i>=0;i--){
+            this.faces.forEach(function(face) {
+                if (face.solvedOrientation == facePossibilities.splice(i, 1 ,-1)) {
+                    faceMaterials.push(new THREE.MeshBasicMaterial({color:Face.ColorToHex()[face.color], side: THREE.DoubleSide}))
+                }
+            })
+            if (faceMaterials.length == counter){
+                faceMaterials.push(new THREE.MeshBasicMaterial({color: currentColor, side: THREE.DoubleSide}));
+            }
+            counter++;
+            this.faces.forEach(function(face) {
+                if (face.solvedOrientation == facePossibilities.splice(i, 1 ,1)) {
+                    faceMaterials.push(new THREE.MeshBasicMaterial({color:Face.ColorToHex()[face.color], side: THREE.DoubleSide}))
+                }
+            })
+            if (faceMaterials.length == counter){
+                faceMaterials.push(new THREE.MeshBasicMaterial({color:currentColor, side: THREE.DoubleSide}));
+            }
+            counter++;
+            facePossibilities = [0,0,0];
+        }
+
+        this.cube.material = faceMaterials;
     }
 }
 
@@ -89,38 +131,52 @@ class RubeCube {
                 }
             }
         }
-        pieces.forEach(function(element) {
-            if (element.type == PieceType.corner) {
-                corners.push(element);
-            } else if (element.type == PieceType.edge) {
-                edge.push(element);
-            } else if (element.type == PieceType.centre) {
-                centre.push(element);
+        pieces.forEach(function(piece) {
+            if (piece.type == PieceType.corner) {
+                corners.push(piece);
+            } else if (piece.type == PieceType.edge) {
+                edge.push(piece);
+            } else if (piece.type == PieceType.centre) {
+                centre.push(piece);
             }
         });
         return [centre, edge, corners];
     }
 
+    GetVisualObject() {
+        var pieces = this.centres.concat(this.edges, this.corners);
+        var group = new THREE.Group();
+        pieces.forEach(function(piece){
+            var size = piece.cube.geometry.parameters.height;
+            var cubePosition = piece.solvedLocation.map(element => size*element);
+            piece.cube.position.set(
+                cubePosition[0] + cubePosition[0]*0.05, 
+                cubePosition[1]+ cubePosition[1]*0.05, 
+                cubePosition[2]+ cubePosition[2]*0.05
+                );
+            piece.PaintPiece();
+            group.add(piece.cube);
+        })
+
+        return group;
+    }
+
     Move(faceColor, direction) {
         var pieces = this.PiecesOnFace(faceColor);
-        var directionVector = Face.ColorToCoordinate()[faceColor];
-        directionVector.forEach(element => element = Math.abs(element));
-
-        if (direction === "cw"){
-            pieces.forEach(function(element) {
-                element.location = CrossProduct(element.location, directionVector);
-            })
-        } else if (direction === "ccw") {
-            pieces.forEach(function(element) {
-                element.location = CrossProduct(directionVector, element.location);                
-            })
-        }
         var faceDirection = Face.ColorToCoordinate()[faceColor];
-        pieces.forEach(function(element) {
-            element.location[0] += faceDirection[0];
-            element.location[1] += faceDirection[1];
-            element.location[2] += faceDirection[2];
+        var nonZeroIndex = faceDirection.findIndex(element => element == 1 || element == -1);
+        var valueAtIndex = faceDirection[nonZeroIndex];
+
+        pieces.forEach(function(piece) {
+            var multiplier = direction=="cw" ? -1:1;
+            piece.location = CrossProduct(faceDirection, piece.location).map(element => multiplier*element);
+            piece.faces.forEach(function(face) {
+                if (face.color != faceColor){
+                    face.orientation = CrossProduct(faceDirection, face.orientation).map(element => multiplier*element);
+                }
+            })
         })
+        pieces.forEach(piece => piece.location[nonZeroIndex] = valueAtIndex);
     }
 
     PiecesOnFace(faceColor) {
@@ -139,7 +195,6 @@ class RubeCube {
         })
         return pieces;
     }
-
 }
 
 function CrossProduct(array1, array2) {
