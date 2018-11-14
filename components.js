@@ -19,11 +19,11 @@ class Face {
     static ColorToHex() {
         return {
             'w' : 0xffffff,
-            'y' : 0xffff00,
-            'g' : 0x00ff00,
-            'b' : 0x0000ff,
-            'r' : 0xff0000,
-            'o' : 0xffa500,
+            'y' : 0xEDD404,
+            'g' : 0x017F24,
+            'b' : 0x005DEB,
+            'r' : 0xDF0000,
+            'o' : 0xFE8700,
         }
     }
 
@@ -70,33 +70,26 @@ class Piece {
     }
 
     PaintPiece(){
-        var currentColor = this.cube.material.color;
-        var facePossibilities = [0,0,0]
-        var faceMaterials = [];
+        var defaultMaterial = new THREE.MeshPhongMaterial({
+            color:'rgb(211,211,211)',
+            side: THREE.DoubleSide
+        });
+        var faceMaterials = new Array(6).fill(defaultMaterial);
+        var map = new WeakMap();
+        map[[1,0,0]] = 0;
+        map[[-1,0,0]] = 1;
+        map[[0,1,0]] = 2;
+        map[[0,-1,0]] = 3;
+        map[[0,0,1]] = 4;
+        map[[0,0,-1]] = 5;
 
-        var counter = 0;
-        for (var i=2;i>=0;i--){
-            this.faces.forEach(function(face) {
-                if (face.solvedOrientation == facePossibilities.splice(i, 1 ,-1)) {
-                    faceMaterials.push(new THREE.MeshBasicMaterial({color:Face.ColorToHex()[face.color], side: THREE.DoubleSide}))
-                }
-            })
-            if (faceMaterials.length == counter){
-                faceMaterials.push(new THREE.MeshBasicMaterial({color: currentColor, side: THREE.DoubleSide}));
-            }
-            counter++;
-            this.faces.forEach(function(face) {
-                if (face.solvedOrientation == facePossibilities.splice(i, 1 ,1)) {
-                    faceMaterials.push(new THREE.MeshBasicMaterial({color:Face.ColorToHex()[face.color], side: THREE.DoubleSide}))
-                }
-            })
-            if (faceMaterials.length == counter){
-                faceMaterials.push(new THREE.MeshBasicMaterial({color:currentColor, side: THREE.DoubleSide}));
-            }
-            counter++;
-            facePossibilities = [0,0,0];
-        }
-
+        this.faces.forEach((face) => {
+            var index = map[face.solvedOrientation];
+            faceMaterials[index] = new THREE.MeshPhongMaterial({
+                color:Face.ColorToHex()[face.color], 
+                side: THREE.DoubleSide
+            });
+        })
         this.cube.material = faceMaterials;
     }
 }
@@ -113,6 +106,9 @@ class RubeCube {
         this.centres = pieces[0];
         this.edges = pieces[1];
         this.corners = pieces[2];
+        this.groupOfPieces = this.GroupPieces();
+        this.movingFace = new THREE.Group();
+        this.groupOfPieces.add(this.movingFace);
     }
 
     CreateRubeCube(size) {
@@ -143,9 +139,8 @@ class RubeCube {
         return [centre, edge, corners];
     }
 
-    GetVisualObject() {
+    PositionVisualCubes(){
         var pieces = this.centres.concat(this.edges, this.corners);
-        var group = new THREE.Group();
         pieces.forEach(function(piece){
             var size = piece.cube.geometry.parameters.height;
             var cubePosition = piece.solvedLocation.map(element => size*element);
@@ -155,10 +150,28 @@ class RubeCube {
                 cubePosition[2]+ cubePosition[2]*0.05
                 );
             piece.PaintPiece();
-            group.add(piece.cube);
         })
+    }
 
-        return group;
+    PiecesOnFace(faceColor) {
+        var faceOrientation = Face.ColorToCoordinate()[faceColor];
+        var index = faceOrientation.findIndex((element) => element == 1 || element == -1);
+        var cubePieces = this.centres.concat(this.edges,this.corners);
+        var facePieces = [];
+        cubePieces.forEach(function(piece) {
+            if (piece.location[index] == faceOrientation[index]){
+                facePieces.push(piece);
+            }
+        })
+        return facePieces;
+    }
+
+    GroupPieces() {
+        this.PositionVisualCubes();
+        var groupedPieces = new THREE.Group();
+        var pieces = this.centres.concat(this.edges,this.corners);
+        pieces.forEach(piece => groupedPieces.add(piece.cube));
+        return groupedPieces;
     }
 
     Move(faceColor, direction) {
@@ -179,21 +192,47 @@ class RubeCube {
         pieces.forEach(piece => piece.location[nonZeroIndex] = valueAtIndex);
     }
 
-    PiecesOnFace(faceColor) {
-        var faceOrientation = Face.ColorToCoordinate()[faceColor];
-        var index = faceOrientation.findIndex((element) => element == 1 || element == -1);
-        var pieces = [];
-        this.edges.forEach(function(element) {
-            if (element.location[index] == faceOrientation[index]){
-                pieces.push(element);
-            }
+    MoveVisual(faceColor, scene) {
+        var piecesOnFace = this.PiecesOnFace(faceColor);
+        piecesOnFace.forEach(piece => {
+            scene.add(piece.cube);
         })
-        this.corners.forEach(function(element) {
-            if (element.location[index] == faceOrientation[index]){
-                pieces.push(element);
-            }
+
+        //this.movingFace.rotation.set(0,0,0);
+        this.movingFace.updateMatrixWorld();
+
+        piecesOnFace.forEach((piece) => {
+            THREE.SceneUtils.attach( piece.cube, scene, this.movingFace);
         })
-        return pieces;
+
+        // Rotation
+        if (faceColor == 'w'){
+            this.movingFace.rotation.y = Math.PI/2;
+        } else {
+            this.movingFace.rotation.z = Math.PI/2;
+        }
+
+        this.movingFace.updateMatrixWorld();
+
+        piecesOnFace.forEach(piece => {
+            piece.cube.updateMatrixWorld();
+            THREE.SceneUtils.detach( piece.cube, this.movingFace, scene );
+        })
+    
+
+        // // Resetting group
+        // if (this.movingFace.children.length > 0){
+        //     for (var i = this.movingFace.children.length - 1; i >= 0; i--) {
+        //         this.groupOfPieces.add(this.movingFace.children[i]);
+        //     }
+        // }
+        // var piecesOnFace = this.PiecesOnFace(faceColor);
+        // piecesOnFace.forEach(piece => this.movingFace.add(piece.cube));
+    }
+
+
+    CreateVisualGroup(faceColor) {
+        
     }
 }
 

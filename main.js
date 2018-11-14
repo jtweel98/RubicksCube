@@ -3,26 +3,16 @@ var scene = new THREE.Scene();
 //Creating objects
 var pointLight1 = getPointLight(1, 0xffffff);
 var pointLight2 = getPointLight(1, 0xffffff);
-var cube  = new RubeCube();
-
-var test = new Piece([0,0,0], 1);
-test.cube.position.set(3,3,3);
-var cubeMaterials = [ 
-    new THREE.MeshBasicMaterial({color:"red", side: THREE.DoubleSide}),
-    new THREE.MeshBasicMaterial({color:"blue", side: THREE.DoubleSide}), 
-    new THREE.MeshBasicMaterial({color:"green", side: THREE.DoubleSide}),
-    new THREE.MeshBasicMaterial({color:"yellow", side: THREE.DoubleSide}), 
-    new THREE.MeshBasicMaterial({color:"orange", side: THREE.DoubleSide}), 
-    new THREE.MeshBasicMaterial({color:"white", side: THREE.DoubleSide}), 
-]; 
-
-test.cube.material = cubeMaterials
+var cube = new RubeCube();
 
 //Adding objects to scene
 scene.add(pointLight1);
 scene.add(pointLight2);
-scene.add(cube.GetVisualObject());
-scene.add(test.cube);
+var a = cube.groupOfPieces;
+scene.add(a);
+cube.MoveVisual('w',scene);
+//cube.MoveVisual('b',1);
+
 
 //Begining Positions
 pointLight1.position.y = 7;

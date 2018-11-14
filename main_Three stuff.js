@@ -3,8 +3,8 @@ var scene = new THREE.Scene();
 
 //Creating objects
 var cube = getCube(1,0xff0000);
-var pointLight1 = getPointLight(1, 0xffffff);
-var pointLight2 = getPointLight(1, 0xffffff);
+var pointLight1 = getPointLight(2, 0xffffff);
+var pointLight2 = getPointLight(2, 0xffffff);
 
 //Adding objects to scene
 scene.add(cube);
