@@ -71,7 +71,7 @@ class Piece {
 
     PaintPiece(){
         var defaultMaterial = new THREE.MeshPhongMaterial({
-            color:'rgb(211,211,211)',
+            color:'rgb(50,50,50)',
             side: THREE.DoubleSide
         });
         var faceMaterials = new Array(6).fill(defaultMaterial);
@@ -102,20 +102,17 @@ var PieceType = {
 
 class RubeCube {
     constructor() {
-        var pieces = this.CreateRubeCube(1);
-        this.centres = pieces[0];
-        this.edges = pieces[1];
-        this.corners = pieces[2];
-        this.groupOfPieces = this.GroupPieces();
-        this.movingFace = new THREE.Group();
-        this.groupOfPieces.add(this.movingFace);
+        this.cubePieces = this.CreateCubePieces(1);
+        this.cubeObject = new THREE.Object3D();
+        this.cubePieces.forEach(piece => {
+            this.cubeObject.add(piece.cube);
+        })
+        this.PositionCubes();
+        this.PaintPieces();
     }
 
-    CreateRubeCube(size) {
+    CreateCubePieces(size) {
         var pieces = new Array();
-        var corners = new Array();
-        var edge = new Array();
-        var centre = new Array();
         for (var y = -1; y <= 1; y++){
             for (var x = -1; x<=1; x++) {
                 for (var z = -1; z<=1; z++) {
@@ -127,38 +124,30 @@ class RubeCube {
                 }
             }
         }
-        pieces.forEach(function(piece) {
-            if (piece.type == PieceType.corner) {
-                corners.push(piece);
-            } else if (piece.type == PieceType.edge) {
-                edge.push(piece);
-            } else if (piece.type == PieceType.centre) {
-                centre.push(piece);
-            }
-        });
-        return [centre, edge, corners];
+        return pieces;
     }
 
-    PositionVisualCubes(){
-        var pieces = this.centres.concat(this.edges, this.corners);
-        pieces.forEach(function(piece){
+    PositionCubes(){
+        this.cubePieces.forEach(function(piece){
             var size = piece.cube.geometry.parameters.height;
             var cubePosition = piece.solvedLocation.map(element => size*element);
             piece.cube.position.set(
                 cubePosition[0] + cubePosition[0]*0.05, 
                 cubePosition[1]+ cubePosition[1]*0.05, 
                 cubePosition[2]+ cubePosition[2]*0.05
-                );
-            piece.PaintPiece();
+            );
         })
+    }
+
+    PaintPieces() {
+        this.cubePieces.forEach(piece => piece.PaintPiece());
     }
 
     PiecesOnFace(faceColor) {
         var faceOrientation = Face.ColorToCoordinate()[faceColor];
         var index = faceOrientation.findIndex((element) => element == 1 || element == -1);
-        var cubePieces = this.centres.concat(this.edges,this.corners);
         var facePieces = [];
-        cubePieces.forEach(function(piece) {
+        this.cubePieces.forEach(function(piece) {
             if (piece.location[index] == faceOrientation[index]){
                 facePieces.push(piece);
             }
@@ -166,15 +155,8 @@ class RubeCube {
         return facePieces;
     }
 
-    GroupPieces() {
-        this.PositionVisualCubes();
-        var groupedPieces = new THREE.Group();
-        var pieces = this.centres.concat(this.edges,this.corners);
-        pieces.forEach(piece => groupedPieces.add(piece.cube));
-        return groupedPieces;
-    }
-
     Move(faceColor, direction) {
+        this.MoveVisual(faceColor, direction);
         var pieces = this.PiecesOnFace(faceColor);
         var faceDirection = Face.ColorToCoordinate()[faceColor];
         var nonZeroIndex = faceDirection.findIndex(element => element == 1 || element == -1);
@@ -192,47 +174,41 @@ class RubeCube {
         pieces.forEach(piece => piece.location[nonZeroIndex] = valueAtIndex);
     }
 
-    MoveVisual(faceColor, scene) {
+    MoveVisual(faceColor, direction) {
         var piecesOnFace = this.PiecesOnFace(faceColor);
+        var pivotGroup = new THREE.Object3D();
+        this.cubeObject.add(pivotGroup);
+        pivotGroup.updateMatrixWorld();
+
         piecesOnFace.forEach(piece => {
-            scene.add(piece.cube);
+            pivotGroup.add(piece.cube);
         })
 
-        //this.movingFace.rotation.set(0,0,0);
-        this.movingFace.updateMatrixWorld();
-
-        piecesOnFace.forEach((piece) => {
-            THREE.SceneUtils.attach( piece.cube, scene, this.movingFace);
-        })
-
-        // Rotation
-        if (faceColor == 'w'){
-            this.movingFace.rotation.y = Math.PI/2;
-        } else {
-            this.movingFace.rotation.z = Math.PI/2;
+        var rotationVal = Math.PI/2;
+        if (direction == "cw") {
+            rotationVal = -rotationVal;
         }
+        var rotation = Face.ColorToCoordinate()[faceColor];
+        rotation = rotation.map(value => value*rotationVal);
 
-        this.movingFace.updateMatrixWorld();
-
-        piecesOnFace.forEach(piece => {
-            piece.cube.updateMatrixWorld();
-            THREE.SceneUtils.detach( piece.cube, this.movingFace, scene );
-        })
-    
-
-        // // Resetting group
-        // if (this.movingFace.children.length > 0){
-        //     for (var i = this.movingFace.children.length - 1; i >= 0; i--) {
-        //         this.groupOfPieces.add(this.movingFace.children[i]);
-        //     }
-        // }
-        // var piecesOnFace = this.PiecesOnFace(faceColor);
-        // piecesOnFace.forEach(piece => this.movingFace.add(piece.cube));
+        pivotGroup.rotation.set(rotation[0],rotation[1],rotation[2]);
+        pivotGroup.updateMatrixWorld();
+        
+        for (var i = pivotGroup.children.length - 1; i >= 0; i--) {
+            pivotGroup.children[i].applyMatrix(pivotGroup.matrixWorld);
+            this.cubeObject.add(pivotGroup.children[i]);
+        }
+        this.cubeObject.remove(pivotGroup);
     }
 
-
-    CreateVisualGroup(faceColor) {
-        
+    Scramble() {
+        var colors = ['w','y','r','g','b','o'];
+        var direction = ['cw', 'ccw'];
+        for (var i = 0; i<20;i++){
+            var randColor = colors[Math.floor(Math.random() * 6)];
+            var randDir = direction[Math.floor(Math.random() * 2)];
+            this.Move(randColor,randDir);
+        }
     }
 }
 
@@ -241,4 +217,71 @@ function CrossProduct(array1, array2) {
     var y = array1[2]*array2[0] - array1[0]*array2[2];
     var z = array1[0]*array2[1] - array1[1]*array2[0];
     return [x,y,z];
+}
+
+function Test( ){
+    var piecesOnFace = this.PiecesOnFace(faceColor);
+    piecesOnFace.forEach(piece => {
+        scene.add(piece.cube);
+    })
+
+    //this.movingFace.rotation.set(0,0,0);
+    this.movingFace.updateMatrixWorld();
+
+    piecesOnFace.forEach((piece) => {
+        THREE.SceneUtils.attach( piece.cube, scene, this.movingFace);
+    })
+
+    // Rotation
+    if (faceColor == 'w'){
+        this.movingFace.rotation.y = Math.PI/2;
+    } else {
+        this.movingFace.rotation.z = Math.PI/2;
+    }
+
+    this.movingFace.updateMatrixWorld();
+
+    piecesOnFace.forEach(piece => {
+        piece.cube.updateMatrixWorld();
+        THREE.SceneUtils.detach( piece.cube, this.movingFace, scene );
+    })
+
+
+    // // Resetting group
+    // if (this.movingFace.children.length > 0){
+    //     for (var i = this.movingFace.children.length - 1; i >= 0; i--) {
+    //         this.groupOfPieces.add(this.movingFace.children[i]);
+    //     }
+    // }
+    // var piecesOnFace = this.PiecesOnFace(faceColor);
+    // piecesOnFace.forEach(piece => this.movingFace.add(piece.cube));
+}
+
+function AnotherTest (){
+    var testGroup = new THREE.Group();
+
+        piecesOnFace.forEach(piece => {
+            testGroup.add(piece.cube);
+        })
+
+        this.pivotGroup.updateMatrixWorld();
+        this.pivotGroup.position.set(0,0,0);
+
+        THREE.SceneUtils.attach(testGroup,scene,this.pivotGroup);
+        // piecesOnFace.forEach(piece => {
+        //     THREE.SceneUtils.attach(piece.cube,scene,this.pivotGroup);
+        // })
+
+        this.pivotGroup.rotation.set(0,Math.PI/2,0);
+
+        
+        this.pivotGroup.updateMatrixWorld();
+        testGroup.updateMatrixWorld();
+        THREE.SceneUtils.detach(testGroup,this.pivotGroup,scene);
+
+        for (var i = testGroup.children.length - 1; i >= 0; i--) {
+            scene.add(testGroup.children[i]);
+        }
+
+        scene.remove(testGroup);
 }
