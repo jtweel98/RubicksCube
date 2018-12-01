@@ -4,7 +4,11 @@ var scene = new THREE.Scene();
 var pointLight1 = getPointLight(1, 0xffffff);
 var pointLight2 = getPointLight(1, 0xffffff);
 var cube = new RubeCube();
-cube.Scramble();
+
+//cube.Move('r', 'cw'); 
+//cube.Move('r', 'cw');
+
+var cubeSolver = new CubeSolver();
 
 //Adding objects to scene
 scene.add(pointLight1);
@@ -109,9 +113,22 @@ function getPointLight (intensity, color) {
     return light;
   }
 
-  function ContinuousRender(renderer, scene, camera, controls) {
-    renderer.render(scene, camera);
-    controls.update();
-    TWEEN.update();
-    requestAnimationFrame(() => ContinuousRender(renderer, scene, camera, controls))
-  }
+function ContinuousRender(renderer, scene, camera, controls) {
+  renderer.render(scene, camera);
+  controls.update();
+  TWEEN.update();
+  requestAnimationFrame(() => ContinuousRender(renderer, scene, camera, controls))
+}
+
+function FindSpecificPiece(cube, solvedLoc){
+  var toReturn;
+  cube.cubePieces.forEach(piece => {
+    var x = piece.solvedLocation[0] == solvedLoc[0];
+    var y = piece.solvedLocation[1] == solvedLoc[1];
+    var z = piece.solvedLocation[2] == solvedLoc[2];
+    if (x&&y&&z){
+      toReturn = piece;
+    }
+  })
+  return toReturn;
+}

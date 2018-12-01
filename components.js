@@ -5,6 +5,13 @@ class Face {
         this.color = Face.CoordinateToColor()[orientation];
     }
 
+    IsCorrectOrientation() {
+        var sameX = this.orientation[0] == this.solvedOrientation[0];
+        var sameY = this.orientation[1] == this.solvedOrientation[1];
+        var sameZ = this.orientation[2] == this.solvedOrientation[2];
+        return sameX && sameY && sameZ;
+    }
+
     static ColorToCoordinate() {
         return {
             'w' : [0,1,0],
@@ -36,6 +43,18 @@ class Face {
         map[[1,0,0]] = 'r';
         map[[-1,0,0]] = 'o';
         return map;
+    }
+
+    static IsOnSameFace(coordinate1, coordinate2) {
+        var sameX = coordinate1[0] == coordinate2[0];
+        var sameY = coordinate1[1] == coordinate2[1];
+        var sameZ = coordinate1[2] == coordinate2[2];
+        return sameX || sameY ||sameZ;
+    }
+
+    static GiveOppositeFaceCoordinate(coordinate) {
+        coordinate = coordinate.map(val => -val);
+        return coordinate;
     }
 }
 
@@ -92,12 +111,28 @@ class Piece {
         })
         this.cube.material = faceMaterials;
     }
-}
 
-var PieceType = {
-    centre : 1,
-    edge : 2,
-    corner : 3,
+    ContainsColor(color){
+        var containsColor = false;
+        this.faces.forEach(face =>{
+            if (face.color == color){
+                containsColor = true;
+            }
+        })
+        return containsColor;
+    }
+
+    FindIndexOfFace(color){
+        var faceIndex = -1;
+        this.faces.forEach((face, index) => {
+            if (face.color == color){
+                faceIndex = index;
+            }
+        })
+        return faceIndex;
+    }
+
+
 }
 
 class RubeCube {
@@ -109,6 +144,7 @@ class RubeCube {
         })
         this.PositionCubes();
         this.PaintPieces();
+        this.group;
     }
 
     CreateCubePieces(size) {
@@ -131,10 +167,11 @@ class RubeCube {
         this.cubePieces.forEach(function(piece){
             var size = piece.cube.geometry.parameters.height;
             var cubePosition = piece.solvedLocation.map(element => size*element);
+            var spacingFactor = 0.05;
             piece.cube.position.set(
-                cubePosition[0] + cubePosition[0]*0.05, 
-                cubePosition[1]+ cubePosition[1]*0.05, 
-                cubePosition[2]+ cubePosition[2]*0.05
+                cubePosition[0] + cubePosition[0]*spacingFactor, 
+                cubePosition[1]+ cubePosition[1]*spacingFactor, 
+                cubePosition[2]+ cubePosition[2]*spacingFactor
             );
         })
     }
@@ -166,7 +203,7 @@ class RubeCube {
             var multiplier = direction=="cw" ? -1:1;
             piece.location = CrossProduct(faceDirection, piece.location).map(element => multiplier*element);
             piece.faces.forEach(function(face) {
-                if (face.color != faceColor){
+                if (Face.CoordinateToColor()[face.orientation] != faceColor){
                     face.orientation = CrossProduct(faceDirection, face.orientation).map(element => multiplier*element);
                 }
             })
@@ -204,13 +241,77 @@ class RubeCube {
     Scramble() {
         var colors = ['w','y','r','g','b','o'];
         var direction = ['cw', 'ccw'];
+        var setSteps = [3, 3, 5, 0, 3, 1, 3, 0, 4, 4, 5, 4, 4, 3, 2, 3, 1, 2, 1, 3, 1, 1, 4, 0, 1, 4, 2, 5, 0, 0, 3, 1, 2, 2, 0, 1, 5, 2, 1, 4];
+        var setDir = [1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1];
+
         for (var i = 0; i<20;i++){
-            var randColor = colors[Math.floor(Math.random() * 6)];
-            var randDir = direction[Math.floor(Math.random() * 2)];
-            this.Move(randColor,randDir);
+            // var randColor = colors[Math.floor(Math.random() * 6)];
+            // var randDir = direction[Math.floor(Math.random() * 2)];
+            this.Move(colors[setSteps[i]],direction[setDir[i]]);
         }
+
+        return [setSteps,setDir]
+    }
+
+    GroupPiecesOfType(pieceType, color) {
+        var piecesOfType = [];
+        this.cubePieces.forEach(piece => {
+            var isType = piece.type == pieceType;
+            var isColor = piece.ContainsColor(color);
+            if (isType && isColor){
+                piecesOfType.push(piece);
+            }
+        })
+        this.group = piecesOfType;
     }
 }
+
+class CubeSolver {
+
+    SolveCross(cube,color){
+        cube.GroupPiecesOfType(PieceType.edge, color);
+        cube.group.forEach(piece => {
+            if (piece.solvedLocation == piece.location) {return }
+            // Getting face information
+            var faceIndex = piece.FindIndexOfFace(color);
+            // otherFaceIndex contains the other color on the given edge piece
+            var otherFaceIndex = (faceIndex+1)%2;
+
+            var face = piece.faces[faceIndex];
+            var otherFace = piece.faces[otherFaceIndex];
+
+            var botOrientation = Face.GiveOppositeFaceCoordinate(face.solvedOrientation);
+            var botFace = new Face(botOrientation);
+    
+            // Edge piece is on bottom
+            var isOnBottom = Face.IsOnSameFace(piece.location, botFace.orientation);
+            if (isOnBottom) {
+                // Face is in bottom direction
+                if (Face.IsOnSameFace(face.orientation, botFace.orientation)) {
+                    // Turn until it is under where it needs to go
+                    var test1 = !otherFace.IsCorrectOrientation();
+                    while(test1){
+                        cube.Move(botFace.color, 'cw');
+                        otherFace = piece.faces[otherFaceIndex];
+                        face = piece.faces[faceIndex];
+                        test1 = !otherFace.IsCorrectOrientation();
+                    }
+
+                    var test2 = !face.IsCorrectOrientation();
+                    while(test2){
+                        cube.Move(otherFace.color, 'cw');
+                        face = piece.faces[faceIndex];
+                        test2 = !face.IsCorrectOrientation();
+                    }
+                } else { // Face is not in bottom direction
+    
+                }
+            }
+        })
+    }
+
+}
+
 
 function CrossProduct(array1, array2) {
     var x = array1[1]*array2[2] - array1[2]*array2[1];
@@ -219,69 +320,9 @@ function CrossProduct(array1, array2) {
     return [x,y,z];
 }
 
-function Test( ){
-    var piecesOnFace = this.PiecesOnFace(faceColor);
-    piecesOnFace.forEach(piece => {
-        scene.add(piece.cube);
-    })
 
-    //this.movingFace.rotation.set(0,0,0);
-    this.movingFace.updateMatrixWorld();
-
-    piecesOnFace.forEach((piece) => {
-        THREE.SceneUtils.attach( piece.cube, scene, this.movingFace);
-    })
-
-    // Rotation
-    if (faceColor == 'w'){
-        this.movingFace.rotation.y = Math.PI/2;
-    } else {
-        this.movingFace.rotation.z = Math.PI/2;
-    }
-
-    this.movingFace.updateMatrixWorld();
-
-    piecesOnFace.forEach(piece => {
-        piece.cube.updateMatrixWorld();
-        THREE.SceneUtils.detach( piece.cube, this.movingFace, scene );
-    })
-
-
-    // // Resetting group
-    // if (this.movingFace.children.length > 0){
-    //     for (var i = this.movingFace.children.length - 1; i >= 0; i--) {
-    //         this.groupOfPieces.add(this.movingFace.children[i]);
-    //     }
-    // }
-    // var piecesOnFace = this.PiecesOnFace(faceColor);
-    // piecesOnFace.forEach(piece => this.movingFace.add(piece.cube));
-}
-
-function AnotherTest (){
-    var testGroup = new THREE.Group();
-
-        piecesOnFace.forEach(piece => {
-            testGroup.add(piece.cube);
-        })
-
-        this.pivotGroup.updateMatrixWorld();
-        this.pivotGroup.position.set(0,0,0);
-
-        THREE.SceneUtils.attach(testGroup,scene,this.pivotGroup);
-        // piecesOnFace.forEach(piece => {
-        //     THREE.SceneUtils.attach(piece.cube,scene,this.pivotGroup);
-        // })
-
-        this.pivotGroup.rotation.set(0,Math.PI/2,0);
-
-        
-        this.pivotGroup.updateMatrixWorld();
-        testGroup.updateMatrixWorld();
-        THREE.SceneUtils.detach(testGroup,this.pivotGroup,scene);
-
-        for (var i = testGroup.children.length - 1; i >= 0; i--) {
-            scene.add(testGroup.children[i]);
-        }
-
-        scene.remove(testGroup);
+var PieceType = {
+    centre : 1,
+    edge : 2,
+    corner : 3,
 }
