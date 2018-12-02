@@ -13,7 +13,7 @@ var cubeSolver = new CubeSolver();
 //Adding objects to scene
 scene.add(pointLight1);
 scene.add(pointLight2);
-scene.add(cube.cubeObject);
+scene.add(cube.visualCube);
 
 //Begining Positions
 pointLight1.position.y = 7;
