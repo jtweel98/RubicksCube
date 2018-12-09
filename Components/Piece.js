@@ -89,13 +89,12 @@ class Piece {
     * Output - containsColor: Boolean
     */
     ContainsColor(color){
-        let containsColor = false;
-        this.faces.forEach(face =>{
-            if (face.color == color){
-                containsColor = true;
+        for (let i =0; i< this.faces.length; i++){
+            if (this.faces[i].color == color){
+                return true;
             }
-        })
-        return containsColor;
+        }
+        return false
     }
 
     /*
@@ -113,9 +112,54 @@ class Piece {
         })
         return faceIndex;
     }
+
+    IsCorrectLocation(){
+        for (let i=0; i<this.location.length; i++){
+            if (this.location[i] !== this.solvedLocation[i]) return false;
+        }
+        return true
+    }
+
+    IsCorrectOrientation() {
+        for (let i = 0; i<this.faces.length; i++){
+            if (!this.faces[i].IsCorrectOrientation()) return false;
+        }
+        return true;
+    }
+
+    IsOnSameFace(color){
+        let coordinate = Face.ColorToOrientation[color]
+        for(let i=0; i<coordinate.length; i++){
+            if (coordinate[i] != 0){
+                return coordinate[i] === this.location[i];
+            }
+        }
+    }
+
+    GetFace(color) {
+        for (let i = 0; i<this.faces.length; i++) {
+            if (this.faces[i].color === color) return this.faces[i];
+        }
+        console.log("Color not found on piece");
+        return -1;
+    }
+
+    /*
+    * Definition - TEMPORARY FUCNTION FOR FINDING A PIECE
+    * Input - 
+    * Output - 
+    */
+    ListColors(){
+        let str = "";
+        this.faces.forEach(face => {
+            str = str + ", " + face.color
+        })
+        return str;
+    }
+    
 }
 
-var PieceType = {
+let PieceType = {
     centre : 1,
     edge : 2,
     corner : 3,

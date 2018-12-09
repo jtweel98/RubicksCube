@@ -96,13 +96,6 @@ class RubeCube {
         let piecesOnFace = this.GetPiecesOnFace(color);
         let faceOrientation = Face.ColorToOrientation[color];
 
-        let CrossProduct = function (array1, array2) {
-            var x = array1[1]*array2[2] - array1[2]*array2[1];
-            var y = array1[2]*array2[0] - array1[0]*array2[2];
-            var z = array1[0]*array2[1] - array1[1]*array2[0];
-            return [x,y,z];
-        }
-
         piecesOnFace.forEach(function(piece) {
             let multiplier = (direction==="cw")? -1:1;
             piece.location = CrossProduct(faceOrientation, piece.location).map(element => multiplier*element);
@@ -159,12 +152,13 @@ class RubeCube {
     Scramble() {
         let colors = ['w','y','r','g','b','o'];
         let direction = ['cw', 'ccw'];
-        let setSteps = [3, 3, 5, 0, 3, 1, 3, 0, 4, 4, 5, 4, 4, 3, 2, 3, 1, 2, 1, 3, 1, 1, 4, 0, 1, 4, 2, 5, 0, 0, 3, 1, 2, 2, 0, 1, 5, 2, 1, 4];
-        let setDir = [1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1];
+        // let setSteps = [3, 3, 5, 0, 3, 1, 3, 0, 4, 4, 5, 4, 4, 3, 2, 3, 1, 2, 1, 3, 1, 1, 4, 0, 1, 4, 2, 5, 0, 0, 3, 1, 2, 2, 0, 1, 5, 2, 1, 4];
+        // let setDir = [1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1];
         for (let i = 0; i<20;i++){
-            // var randColor = colors[Math.floor(Math.random() * 6)];
-            // var randDir = direction[Math.floor(Math.random() * 2)];
-            this.Move(colors[setSteps[i]],direction[setDir[i]]);
+            let randColor = colors[Math.floor(Math.random() * 6)];
+            let randDir = direction[Math.floor(Math.random() * 2)];
+            // this.Move(colors[setSteps[i]],direction[setDir[i]]);
+            this.Move(randColor,randDir);
         }
     }
 
@@ -184,6 +178,24 @@ class RubeCube {
         })
         this.group = piecesOfType;
     }
+
+    GetPiecesOfType(pieceType, color) {
+        let piecesOfType = [];
+        this.cubePieces.forEach(piece => {
+            let isType = piece.type === pieceType;
+            let isColor = piece.ContainsColor(color);
+            if (isType && isColor){
+                piecesOfType.push(piece);
+            }
+        })
+        return piecesOfType;
+    }
+
 }
 
-PieceType
+function CrossProduct(array1, array2) {
+    var x = array1[1]*array2[2] - array1[2]*array2[1];
+    var y = array1[2]*array2[0] - array1[0]*array2[2];
+    var z = array1[0]*array2[1] - array1[1]*array2[0];
+    return [x,y,z];
+}

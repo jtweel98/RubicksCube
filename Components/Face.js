@@ -55,16 +55,27 @@ class Face {
         return map;
     }
 
+    static get OppositeColorOf() {
+        return {
+            'w' : 'y',
+            'y' : 'w',
+            'g' : 'b',
+            'b' : 'g',
+            'r' : 'o',
+            'o' : 'r',
+        }
+    }
+
     /*
     * Definition - Returns true if the face is in the correct orientation, and false otherwise
     * Input - None
     * Output - Boolean
     */
     IsCorrectOrientation() {
-        var sameX = this.orientation[0] == this.solvedOrientation[0];
-        var sameY = this.orientation[1] == this.solvedOrientation[1];
-        var sameZ = this.orientation[2] == this.solvedOrientation[2];
-        return sameX && sameY && sameZ;
+        for (let i=0; i<this.orientation.length;i++){
+            if (this.orientation[i] !== this.solvedOrientation[i]) return false
+        }
+        return true
     }
 
     /*
@@ -79,6 +90,13 @@ class Face {
         return sameX || sameY ||sameZ;
     }
 
+    static AdjacentFace(color, topColor, side){
+        let multiplier = side === 'l'? 1:-1;
+        let coordinate = CrossProduct(this.ColorToOrientation[color],this.ColorToOrientation[topColor]);
+        coordinate = coordinate.map(val => multiplier*val)
+        return Face.OrientationToColor[coordinate];
+    }
+
     /*
     * Definition - Returns the face orientation 
     * Input - coordinate: Array
@@ -88,10 +106,8 @@ class Face {
         coordinate = coordinate.map(val => -val);
         return coordinate;
     }
-}
 
-var PieceType = {
-    centre : 1,
-    edge : 2,
-    corner : 3,
+
+
+
 }

@@ -4,11 +4,33 @@ var scene = new THREE.Scene();
 var pointLight1 = getPointLight(1, 0xffffff);
 var pointLight2 = getPointLight(1, 0xffffff);
 var cube = new RubeCube();
+// cube.Move('g','ccw')
+// cube.Move('b','cw')
+// cube.Move('r','cw')
+// cube.Move('g','cw')
+// cube.Move('b','ccw')
+
+// cube.Move('g','ccw')
+// cube.Move('o','ccw')
+
+// cube.Move('b','cw')
+// cube.Move('b','cw')
+// cube.Move('w', 'cw')
+// cube.Move('r', 'cw')
+// cube.Move('b', 'ccw')
+// cube.Move('r', 'cw')
+
+cube.Move('r','ccw');
+cube.Move('y','ccw');
+cube.Move('r','cw');
+cube.Move('y','cw');
+
 
 //cube.Move('r', 'cw'); 
 //cube.Move('r', 'cw');
 
-var cubeSolver = new CubeSolver();
+var cubeSolver = new CubeSolver(cube);
+//cubeSolver.Solve('w')
 
 //Adding objects to scene
 scene.add(pointLight1);
