@@ -1,49 +1,62 @@
 var scene = new THREE.Scene();
 
 //Creating objects
-var pointLight1 = getPointLight(1, 0xffffff);
-var pointLight2 = getPointLight(1, 0xffffff);
-var cube = new RubeCube();
-// cube.Move('g','ccw')
-// cube.Move('b','cw')
-// cube.Move('r','cw')
-// cube.Move('g','cw')
-// cube.Move('b','ccw')
-
-// cube.Move('g','ccw')
-// cube.Move('o','ccw')
-
-// cube.Move('b','cw')
-// cube.Move('b','cw')
-// cube.Move('w', 'cw')
-// cube.Move('r', 'cw')
-// cube.Move('b', 'ccw')
-// cube.Move('r', 'cw')
-
-cube.Move('r','ccw');
-cube.Move('y','ccw');
-cube.Move('r','cw');
-cube.Move('y','cw');
-
-
-//cube.Move('r', 'cw'); 
-//cube.Move('r', 'cw');
-
-var cubeSolver = new CubeSolver(cube);
-//cubeSolver.Solve('w')
-
-//Adding objects to scene
-scene.add(pointLight1);
-scene.add(pointLight2);
-scene.add(cube.visualCube);
+var pointLight1 = getPointLight(0.3, 0xffffff);
+var pointLight2 = getPointLight(0.3, 0xffffff);
+var pointLight3 = getPointLight(0.3, 0xffffff);
+var pointLight4 = getPointLight(0.3, 0xffffff);
+var pointLight5 = getPointLight(0.3, 0xffffff);
+var pointLight6 = getPointLight(0.3, 0xffffff);
+var pointLight7 = getPointLight(0.3, 0xffffff);
+var pointLight8 = getPointLight(0.3, 0xffffff);
 
 //Begining Positions
 pointLight1.position.y = 7;
 pointLight1.position.x = 7;
 pointLight1.position.z = 7;
+
 pointLight2.position.y = -7;
 pointLight2.position.x = -7;
 pointLight2.position.z = -7;
+
+pointLight3.position.y = -7;
+pointLight3.position.x = 7;
+pointLight3.position.z = 7;
+
+pointLight4.position.y = 7;
+pointLight4.position.x = -7;
+pointLight4.position.z = 7;
+
+pointLight5.position.y = 7;
+pointLight5.position.x = 7;
+pointLight5.position.z = -7;
+
+pointLight6.position.y = -7;
+pointLight6.position.x = -7;
+pointLight6.position.z = 7;
+
+pointLight7.position.y = 7;
+pointLight7.position.x = -7;
+pointLight7.position.z = -7;
+
+pointLight8.position.y = -7;
+pointLight8.position.x = 7;
+pointLight8.position.z = -7;
+
+var rubeCube = new RubeCube();
+var cubeSolver = new CubeSolver(rubeCube);
+
+//Adding objects to scene
+scene.add(pointLight1);
+scene.add(pointLight2);
+scene.add(pointLight3);
+scene.add(pointLight4);
+scene.add(pointLight5);
+scene.add(pointLight6);
+scene.add(pointLight7);
+scene.add(pointLight8);
+
+scene.add(rubeCube.visualCube);
 
 //Camera creation
 var camera = new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,1,1000);
@@ -66,41 +79,48 @@ var gui = new dat.GUI();
 
 var buttons = {
   w_cw : function() {
-    cube.Move('w', 'cw')
+    rubeCube.Move('w', 'cw', true)
   },
   w_ccw : function() {
-    cube.Move('w', 'ccw')
+    rubeCube.Move('w', 'ccw', true)
   },
   y_cw : function() {
-    cube.Move('y', 'cw')
+    rubeCube.Move('y', 'cw', true)
   },
   y_ccw : function() {
-    cube.Move('y', 'ccw')
+    rubeCube.Move('y', 'ccw', true)
   },
   g_cw : function() {
-    cube.Move('g', 'cw')
+    rubeCube.Move('g', 'cw', true)
   },
   g_ccw : function() {
-    cube.Move('g', 'ccw')
+    rubeCube.Move('g', 'ccw', true)
   },
   b_cw : function() {
-    cube.Move('b', 'cw')
+    rubeCube.Move('b', 'cw', true)
   },
   b_ccw : function() {
-    cube.Move('b', 'ccw')
+    rubeCube.Move('b', 'ccw', true)
   },
   r_cw : function() {
-    cube.Move('r', 'cw')
+    rubeCube.Move('r', 'cw', true)
   },
   r_ccw : function() {
-    cube.Move('r', 'ccw')
+    rubeCube.Move('r', 'ccw', true)
   },
   o_cw : function() {
-    cube.Move('o', 'cw')
+    rubeCube.Move('o', 'cw', true)
   },
   o_ccw : function() {
-    cube.Move('o', 'ccw')
+    rubeCube.Move('o', 'ccw', true)
   },
+  scramble : function() {
+    rubeCube.Scramble();
+  },
+  cross : () => cubeSolver.SolveCross('w'),
+  corners : () => cubeSolver.SolveCorners('w'),
+  secondLayer : () => cubeSolver.SolveSecondLayer('w'),
+  solveAll : () => cubeSolver.SolveAll('w'),
 };
 
 gui.add(buttons,'w_cw');
@@ -115,8 +135,11 @@ gui.add(buttons,'b_cw');
 gui.add(buttons,'b_ccw');
 gui.add(buttons,'g_cw');
 gui.add(buttons,'g_ccw');
-
-
+gui.add(buttons,'scramble');
+gui.add(buttons,'cross');
+gui.add(buttons, 'corners');
+gui.add(buttons, 'secondLayer');
+gui.add(buttons, 'solveAll');
 
 // --------------- FUNCTIONS -------------------------------------------------------------------
 function getCube (s, color) {
@@ -138,8 +161,13 @@ function getPointLight (intensity, color) {
 function ContinuousRender(renderer, scene, camera, controls) {
   renderer.render(scene, camera);
   controls.update();
+  //console.log("isAnimating")
   TWEEN.update();
   requestAnimationFrame(() => ContinuousRender(renderer, scene, camera, controls))
+}
+
+function Render(renderer, scene, camera){
+  renderer.render(scene, camera);
 }
 
 function FindSpecificPiece(cube, solvedLoc){
