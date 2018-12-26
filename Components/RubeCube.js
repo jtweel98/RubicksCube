@@ -9,6 +9,7 @@ class RubeCube {
         this.cubePieces = this.CreateCubePieces();
         this.visualCube = this.CreateVisualCube(this.cubePieces);
         this.tween = null;
+        this.moveHistory = [[],[]];
     }
 
     /*
@@ -174,13 +175,16 @@ class RubeCube {
         let intervalId = setInterval(() => {
             let randColor = colors[Math.floor(Math.random() * 6)];
             let randDir = direction[Math.floor(Math.random() * 2)];
-            this.Move(randColor,randDir,true,150);
-            // this.Move(colors[setSteps[i]],direction[setDir[i]]);
+            this.moveHistory[0].push(randColor);
+            this.moveHistory[1].push(randDir)
+            this.Move(randColor,randDir,true,50);
+            // this.Move(colors[setSteps[counter]],direction[setDir[counter]], true, 150);
             counter++;
-            if (counter > 30){
+            if (counter >= 30){
                 clearInterval(intervalId);
+                console.log(this.moveHistory);
             }
-        }, 200);
+        }, 100);
     }
 
     GetPiecesOfType(pieceType, color) {

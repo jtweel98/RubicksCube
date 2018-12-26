@@ -1,5 +1,6 @@
 var scene = new THREE.Scene();
 
+//alert(arrat.length)
 //Creating objects
 var pointLight1 = getPointLight(0.3, 0xffffff);
 var pointLight2 = getPointLight(0.3, 0xffffff);
@@ -79,40 +80,40 @@ var gui = new dat.GUI();
 
 var buttons = {
   w_cw : function() {
-    rubeCube.Move('w', 'cw', true)
+    rubeCube.Move('w', 'cw', true, 100)
   },
   w_ccw : function() {
-    rubeCube.Move('w', 'ccw', true)
+    rubeCube.Move('w', 'ccw', true, 100)
   },
   y_cw : function() {
-    rubeCube.Move('y', 'cw', true)
+    rubeCube.Move('y', 'cw', true, 100)
   },
   y_ccw : function() {
-    rubeCube.Move('y', 'ccw', true)
+    rubeCube.Move('y', 'ccw', true, 100)
   },
   g_cw : function() {
-    rubeCube.Move('g', 'cw', true)
+    rubeCube.Move('g', 'cw', true, 100)
   },
   g_ccw : function() {
-    rubeCube.Move('g', 'ccw', true)
+    rubeCube.Move('g', 'ccw', true, 100)
   },
   b_cw : function() {
-    rubeCube.Move('b', 'cw', true)
+    rubeCube.Move('b', 'cw', true, 100)
   },
   b_ccw : function() {
-    rubeCube.Move('b', 'ccw', true)
+    rubeCube.Move('b', 'ccw', true, 100)
   },
   r_cw : function() {
-    rubeCube.Move('r', 'cw', true)
+    rubeCube.Move('r', 'cw', true, 100)
   },
   r_ccw : function() {
-    rubeCube.Move('r', 'ccw', true)
+    rubeCube.Move('r', 'ccw', true, 100)
   },
   o_cw : function() {
-    rubeCube.Move('o', 'cw', true)
+    rubeCube.Move('o', 'cw', true, 100)
   },
   o_ccw : function() {
-    rubeCube.Move('o', 'ccw', true)
+    rubeCube.Move('o', 'ccw', true, 100)
   },
   scramble : function() {
     rubeCube.Scramble();
@@ -120,6 +121,10 @@ var buttons = {
   cross : () => cubeSolver.SolveCross('w'),
   corners : () => cubeSolver.SolveCorners('w'),
   secondLayer : () => cubeSolver.SolveSecondLayer('w'),
+  bottomCross : () => cubeSolver.SolveBottomCross('w'),
+  bottomFace : () => cubeSolver.SolveBottomFace('w'),
+  bottomCorners : () => cubeSolver.SolveBottomCorners('w'),
+  bottomEdges : () => cubeSolver.SolveBottomEdges('w'),
   solveAll : () => cubeSolver.SolveAll('w'),
 };
 
@@ -139,7 +144,11 @@ gui.add(buttons,'scramble');
 gui.add(buttons,'cross');
 gui.add(buttons, 'corners');
 gui.add(buttons, 'secondLayer');
+gui.add(buttons, 'bottomCross');
+gui.add(buttons, 'bottomFace');
+gui.add(buttons, 'bottomCorners');
 gui.add(buttons, 'solveAll');
+gui.add(buttons, 'bottomEdges');
 
 // --------------- FUNCTIONS -------------------------------------------------------------------
 function getCube (s, color) {

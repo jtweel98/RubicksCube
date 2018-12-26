@@ -106,8 +106,4 @@ class Face {
         coordinate = coordinate.map(val => -val);
         return coordinate;
     }
-
-
-
-
 }

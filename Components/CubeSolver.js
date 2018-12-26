@@ -3,6 +3,8 @@ class CubeSolver {
         this.rubeCube = cube;
         this.copyCube = _.cloneDeep(cube);
         this.moveQueue = [];
+        this.moveInterval = 70;
+        this.moveSpeed = 100;
     }
 
     AddToCross(piece, color){
@@ -218,7 +220,7 @@ class CubeSolver {
     SolveCross(color) {
         if (this.moveQueue.length === 0){
             this.copyCube = _.cloneDeep(this.rubeCube);
-            this.ReadFromQueue(50, 100);
+            this.ReadFromQueue(this.moveSpeed, this.moveInterval);
         }
         let pieces = this.copyCube.GetPiecesOfType(PieceType.edge, color);
         pieces.forEach(piece => {
@@ -229,7 +231,7 @@ class CubeSolver {
     SolveCorners(color) {
         if (this.moveQueue.length === 0){
             this.copyCube = _.cloneDeep(this.rubeCube);
-            this.ReadFromQueue(50, 100);
+            this.ReadFromQueue(this.moveSpeed, this.moveInterval);
         }
         let pieces = this.copyCube.GetPiecesOfType(PieceType.corner, color);
         pieces.forEach(piece => {
@@ -240,7 +242,7 @@ class CubeSolver {
     SolveSecondLayer(color) {
         if (this.moveQueue.length === 0){
             this.copyCube = _.cloneDeep(this.rubeCube);
-            this.ReadFromQueue(50, 100);
+            this.ReadFromQueue(this.moveSpeed, this.moveInterval);
         }
         let opColor = Face.OppositeColorOf[color];
         // Find all pieces that don't have color or opColor
@@ -259,17 +261,273 @@ class CubeSolver {
     }
 
     SolveBottomCross(color){
+        if (this.moveQueue.length === 0){
+            this.copyCube = _.cloneDeep(this.rubeCube);
+            this.ReadFromQueue(this.moveSpeed, this.moveInterval);
+        }
         // Find opColor edge pieces
         let opColor = Face.OppositeColorOf[color];
-        this.rubeCube.GetPiecesOfType()
+        let edgePieces = this.copyCube.GetPiecesOfType(PieceType.edge, opColor);
+        let correctOri = [];
+        let incorrectOri = [];
+        edgePieces.forEach((piece) => {
+            let faceOrientation = piece.GetFace(opColor).orientation;
+            if (IsSameCoordinate(faceOrientation, Face.ColorToOrientation[opColor])){
+                correctOri.push(piece);
+            } else {
+                incorrectOri.push(piece);
+            }
+        });
+        // Check if all pieces are in the proper place
+        if (incorrectOri.length === 0) return;
+        // Checking if it's a dot
+        let isDot = correctOri.length === 0
+        if (isDot){
+            let otherFace = incorrectOri[0].faces.filter((face) => !IsSameCoordinate(face.orientation, Face.ColorToOrientation[opColor]))[0];
+            let frontColor = Face.OrientationToColor[otherFace.orientation];
+            let rightColor = Face.AdjacentFace(frontColor, opColor, 'r');
+            this.MoveAndQueue(frontColor, 'cw');
+            this.MoveAndQueue(rightColor, 'cw');
+            this.MoveAndQueue(opColor, 'cw');
+            this.MoveAndQueue(rightColor, 'ccw');
+            this.MoveAndQueue(opColor, 'ccw');
+            this.MoveAndQueue(frontColor, 'ccw');
+            this.SolveBottomCross(color);
+        } else {
+            // Checking if it's a line
+            let otherFace = correctOri[0].faces.filter((face) => face.color !== opColor)[0];
+            let isLine = correctOri[1].IsOnSameFace(Face.OppositeColorOf[Face.OrientationToColor[otherFace.orientation]]);
 
-        // Find pieces that are properly oriented
+            if (isLine){
+                let otherFace = incorrectOri[0].faces.filter((face) => !IsSameCoordinate(face.orientation, Face.ColorToOrientation[opColor]))[0];
+                let frontColor = Face.OrientationToColor[otherFace.orientation];
+                let rightColor = Face.AdjacentFace(frontColor, opColor, 'r');
+                this.MoveAndQueue(frontColor, 'cw');
+                this.MoveAndQueue(rightColor, 'cw');
+                this.MoveAndQueue(opColor, 'cw');
+                this.MoveAndQueue(rightColor, 'ccw');
+                this.MoveAndQueue(opColor, 'ccw');
+                this.MoveAndQueue(frontColor, 'ccw');
+            } else  { 
+                let otherFace = incorrectOri[0].faces.filter((face) => !IsSameCoordinate(face.orientation, Face.ColorToOrientation[opColor]))[0];
+                let rightColor = Face.AdjacentFace(Face.OrientationToColor[otherFace.orientation], opColor, 'r');
+                let frontColor = Face.OrientationToColor[otherFace.orientation];
+                if (correctOri[0].IsOnSameFace(rightColor) || correctOri[1].IsOnSameFace(rightColor)){
+                    frontColor = Face.AdjacentFace(frontColor, opColor, 'l');
+                }
+                rightColor = Face.AdjacentFace(frontColor, opColor, 'r');
+                this.MoveAndQueue(frontColor, 'cw');
+                this.MoveAndQueue(opColor, 'cw');
+                this.MoveAndQueue(rightColor, 'cw');
+                this.MoveAndQueue(opColor, 'ccw');
+                this.MoveAndQueue(rightColor, 'ccw');
+                this.MoveAndQueue(frontColor, 'ccw');
+            }
+        }
+    }
+
+    SolveBottomFace(color){
+        let algorithm = function(rightColor, opColor) {
+            this.MoveAndQueue(rightColor, 'cw');
+            this.MoveAndQueue(opColor, 'cw');
+            this.MoveAndQueue(rightColor, 'ccw');
+            this.MoveAndQueue(opColor, 'cw');
+            this.MoveAndQueue(rightColor, 'cw');
+            this.MoveAndQueue(opColor, 'cw');
+            this.MoveAndQueue(opColor, 'cw');
+            this.MoveAndQueue(rightColor, 'ccw');
+        }
+        algorithm = algorithm.bind(this);
+
+        if (this.moveQueue.length === 0){
+            this.copyCube = _.cloneDeep(this.rubeCube);
+            this.ReadFromQueue(this.moveSpeed, this.moveInterval);
+        }
+        let opColor = Face.OppositeColorOf[color];
+        let cornerPieces = this.copyCube.GetPiecesOfType(PieceType.corner, opColor);
+        let correctOri = [];
+        let incorrectOri = [];
+        let otherFace = cornerPieces[0].faces.filter((face) => !IsSameCoordinate(face.orientation, Face.ColorToOrientation[opColor]))[0];
+        let rightColor = Face.OrientationToColor[otherFace.orientation];
+        let counter = 0;
+        while(correctOri.length !== 1){
+            if (counter >= 4){
+                this.UndoMoves(counter*8)
+                this.MoveAndQueue(opColor, 'cw');
+                counter = 0;
+            } 
+            correctOri = [];
+            incorrectOri = [];
+            cornerPieces.forEach((piece) => {
+                let faceOrientation = piece.GetFace(opColor).orientation;
+                if (IsSameCoordinate(faceOrientation, Face.ColorToOrientation[opColor])){
+                    correctOri.push(piece);
+                } else {
+                    incorrectOri.push(piece);
+                }
+            });
+            if (incorrectOri.length === 0) return;
+            if (correctOri.length === 1) break;
+            algorithm(rightColor, opColor);
+            counter++;
+        }
+        // Now we have yellow face with one piece in correct orientation
+        let otherFacesOfCorrectPiece = correctOri[0].faces.filter((face) => face.color !== opColor);
+        let firstFaceColor = Face.OrientationToColor[otherFacesOfCorrectPiece[0].orientation];
+        let secondFaceColor = Face.OrientationToColor[otherFacesOfCorrectPiece[1].orientation];
+        rightColor = Face.AdjacentFace(firstFaceColor, opColor, 'r');
+        rightColor = rightColor === secondFaceColor ? Face.AdjacentFace(secondFaceColor, opColor, 'r'):rightColor;
+
+        while(incorrectOri.length > 0){
+            algorithm(rightColor, opColor);
+            correctOri = [];
+            incorrectOri = [];
+            cornerPieces.forEach((piece) => {
+                let faceOrientation = piece.GetFace(opColor).orientation;
+                if (IsSameCoordinate(faceOrientation, Face.ColorToOrientation[opColor])){
+                    correctOri.push(piece);
+                } else {
+                    incorrectOri.push(piece);
+                }
+            });
+            if (incorrectOri.length > 0){
+                this.MoveAndQueue(opColor, 'cw');
+                this.MoveAndQueue(opColor, 'cw');
+            }
+        }
+    }
+
+    SolveBottomCorners(color){
+        let algorithm = function(frontColor, opColor){
+            let leftColor = Face.AdjacentFace(frontColor, opColor, 'l');
+            let backColor = Face.AdjacentFace(leftColor, opColor, 'l');
+            this.MoveAndQueue(leftColor, 'ccw');
+            this.MoveAndQueue(backColor, 'cw');
+            this.MoveAndQueue(leftColor, 'ccw');
+            this.MoveAndQueue(frontColor, 'ccw');
+            this.MoveAndQueue(frontColor, 'ccw');
+            this.MoveAndQueue(leftColor, 'cw');
+            this.MoveAndQueue(backColor, 'ccw');
+            this.MoveAndQueue(leftColor, 'ccw');
+            this.MoveAndQueue(frontColor, 'ccw');
+            this.MoveAndQueue(frontColor, 'ccw');
+            this.MoveAndQueue(leftColor, 'cw');
+            this.MoveAndQueue(leftColor, 'cw');
+        }
+        algorithm = algorithm.bind(this);
+        if (this.moveQueue.length === 0){
+            this.copyCube = _.cloneDeep(this.rubeCube);
+            this.ReadFromQueue(this.moveSpeed, this.moveInterval);
+        }
+        let opColor = Face.OppositeColorOf[color];
+        // Get all corner pieces
+        let cornerPieces = this.copyCube.GetPiecesOfType(PieceType.corner, opColor);
+        // Turn until we see two corners in the proper location
+        let solvedCorners = [];
+        let counter = 0;
+        while(solvedCorners.length !== 2){
+            solvedCorners = [];
+            this.MoveAndQueue(opColor, 'cw');
+            counter++;
+            cornerPieces.forEach((piece) => {
+                if (piece.IsCorrectOrientation() && piece.IsCorrectLocation()){
+                    solvedCorners.push(piece);
+                }
+            });
+            if (solvedCorners.length === 4) return;
+        }
+        this.UndoMoves(counter);
+        // If 2 coordinates are different then perform algorithm on arbitrary face
+        let numDiffCoordinates = 0;
+        for (let i = 0; i<3; i++){
+            if (solvedCorners[0].location[i] !== solvedCorners[1].location[i]){
+                numDiffCoordinates++;
+            }
+        }
+        if (numDiffCoordinates > 1) {
+            let frontColor = solvedCorners[0].faces.filter((face) => face.color !== opColor)[0].color;
+            algorithm(frontColor, opColor);
+            this.SolveBottomCorners(color);
+        } else {
+            // At this point we need to find the face where the two pieces are and pass that to the algorithm
+            // Find coordinate that is the same as the other piece (other than the opColor face)
+            let commonCoordinate = [0,0,0];
+            let opColorCoordinate = Face.ColorToOrientation[opColor];
+            for (let i = 0; i < 3; i++){
+                let sameCoordinate = solvedCorners[0].location[i] === solvedCorners[1].location[i];
+                let sameAsOpCoordinate = solvedCorners[0].location[i] === opColorCoordinate[i];
+                if (sameCoordinate && !sameAsOpCoordinate){
+                    commonCoordinate[i] = solvedCorners[0].location[i];
+                }
+            }
+            let frontColor = Face.OrientationToColor[commonCoordinate];
+            algorithm(frontColor, opColor);
+        }
+    }
+
+    SolveBottomEdges(color){
+        let algorithm = function(backColor, opColor, dir){
+            let frontColor = Face.OppositeColorOf[backColor];
+            let rightColor = Face.AdjacentFace(frontColor, opColor, 'r');
+            let leftColor = Face.AdjacentFace(frontColor, opColor, 'l');
+            this.MoveAndQueue(frontColor, 'cw');
+            this.MoveAndQueue(frontColor, 'cw');
+            this.MoveAndQueue(opColor, dir);
+            this.MoveAndQueue(leftColor, 'cw');
+            this.MoveAndQueue(rightColor, 'ccw');
+            this.MoveAndQueue(frontColor, 'cw');
+            this.MoveAndQueue(frontColor, 'cw');
+            this.MoveAndQueue(leftColor, 'ccw');
+            this.MoveAndQueue(rightColor, 'cw');
+            this.MoveAndQueue(opColor, dir);
+            this.MoveAndQueue(frontColor, 'cw');
+            this.MoveAndQueue(frontColor, 'cw');
+        }
+        algorithm = algorithm.bind(this);
+
+        if (this.moveQueue.length === 0){
+            this.copyCube = _.cloneDeep(this.rubeCube);
+            this.ReadFromQueue(this.moveSpeed, this.moveInterval);
+        }
+
+        let opColor = Face.OppositeColorOf[color];
+        // Get all corner pieces
+        let cornerPieces = this.copyCube.GetPiecesOfType(PieceType.corner, opColor);
+        // Turn until all corner are in correct location
+        while(!cornerPieces[0].IsCorrectLocation() || !cornerPieces[0].IsCorrectOrientation()){
+            this.MoveAndQueue(opColor, 'cw');
+        }
+        let edgePieces = this.copyCube.GetPiecesOfType(PieceType.edge, opColor);
+        let solvedEdge = null;
+        edgePieces.forEach((piece) => {
+            if (piece.IsCorrectLocation() && piece.IsCorrectOrientation()){
+                solvedEdge = piece;
+            }
+        });
+        if (solvedEdge === null){
+            let backColor = edgePieces[0].faces.filter((face) => face.color !== opColor)[0].color;
+            algorithm(backColor, opColor, 'cw');
+            this.SolveBottomEdges(color);
+        }
+        else {
+            let backColor = solvedEdge.faces.filter((face) =>face.color !== opColor)[0].color;
+            algorithm(backColor, opColor, 'cw');
+            edgePieces.forEach((piece) => {
+                if (!piece.IsCorrectLocation() || !piece.IsCorrectOrientation()){
+                    algorithm(backColor, opColor, 'cw');
+                }
+            });
+        }
     }
 
     SolveAll(color){
         this.SolveCross(color);
         this.SolveCorners(color);
         this.SolveSecondLayer(color);
+        this.SolveBottomCross(color);
+        this.SolveBottomFace(color);
+        this.SolveBottomCorners(color);
+        this.SolveBottomEdges(color);
     }
 
     MoveAndQueue(color, direction){
@@ -280,18 +538,17 @@ class CubeSolver {
         this.copyCube.Move(color,direction,false);
     }
 
-    UndoMoves(){
-        let reversedQueue = this.moveQueue.reverse();
-        reversedQueue.forEach((element) => {
-            let newDir = element.dir === 'cw'? 'ccw':'cw'
-            this.rubeCube.Move(element.col, newDir, false);
-        })
-        this.moveQueue.reverse();
+    UndoMoves(numMoves){
+        for(let i = 0; i<numMoves; i++){
+            let move = this.moveQueue.pop();
+            let dir = move.dir === 'cw'? 'ccw':'cw';
+            this.copyCube.Move(move.col, dir, false);
+        }
     }
 
     ReadFromQueue(turnSpeed, interval){
         let readingInterval = setInterval(() => {
-            if (this.moveQueue.length != 0){
+            if (this.moveQueue.length !== 0){
                 // pull from queue
                 let move = this.moveQueue.shift();
                 this.rubeCube.Move(move.col, move.dir, true, turnSpeed);
@@ -300,7 +557,6 @@ class CubeSolver {
             }
         }, interval + turnSpeed);
     }
-
 }
 
 function IsSameCoordinate(coordinate1, coordinate2){
